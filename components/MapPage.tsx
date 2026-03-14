@@ -5,6 +5,8 @@ import { useTranslations } from 'next-intl'
 import { useGeolocation } from '@/hooks/useGeolocation'
 import { useAppStore } from '@/store/useAppStore'
 import { useNearbySpecies } from '@/hooks/useNearbySpecies'
+import { useRangeSpecies } from '@/hooks/useRangeSpecies'
+import { SpeciesCount } from '@/types/species'
 import { useEnvironment } from '@/hooks/useEnvironment'
 import { TaxonFilter } from '@/components/filters/TaxonFilter'
 import { SpeciesPanel } from '@/components/species/SpeciesPanel'
@@ -36,7 +38,31 @@ export function MapPage() {
   const effectiveLat = IS_DEBUG && debugPosition ? debugPosition.lat : geo.lat
   const effectiveLng = IS_DEBUG && debugPosition ? debugPosition.lng : geo.lng
 
-  const { data: species = [], isLoading, error } = useNearbySpecies(effectiveLat, effectiveLng)
+  const { data: observed = [], isLoading, error } = useNearbySpecies(effectiveLat, effectiveLng)
+  const { data: ranges = [] } = useRangeSpecies(effectiveLat, effectiveLng)
+
+  const observedIds = new Set(observed.map((s) => s.taxon.id))
+  const rangeOnly: SpeciesCount[] = ranges
+    .filter((r) => !observedIds.has(r.taxon_id))
+    .map((r) => ({
+      count: 0,
+      source: 'range' as const,
+      taxon: {
+        id: r.taxon_id,
+        name: r.scientific_name,
+        preferred_common_name: undefined,
+        iconic_taxon_name: r.iconic_taxon_name,
+        conservation_status: undefined,
+        default_photo: undefined,
+        wikipedia_url: undefined,
+        ancestry: '',
+      },
+    }))
+
+  const species: SpeciesCount[] = [
+    ...observed.map((s) => ({ ...s, source: 'observed' as const })),
+    ...rangeOnly,
+  ]
   const { data: environment, isLoading: envLoading } = useEnvironment(effectiveLat, effectiveLng)
 
   return (

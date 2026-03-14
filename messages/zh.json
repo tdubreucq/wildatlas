@@ -22,7 +22,8 @@
     "subtitle": "按观测频率排序——排名越靠前，越有可能遇见。",
     "empty": "此范围内未找到物种。请尝试增大范围或更改筛选条件。",
     "error": "无法加载物种。请检查您的网络连接。",
-    "observations": "{count} 次观测"
+    "observations": "{count} 次观测",
+    "inRange": "在分布区内"
   },
   "loading": {
     "map": "地图加载中…",

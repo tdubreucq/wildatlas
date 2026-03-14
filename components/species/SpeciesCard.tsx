@@ -51,7 +51,11 @@ export function SpeciesCard({ speciesCount, selected, onClick }: Props) {
           >
             {groupLabel(taxon.iconic_taxon_name)}
           </span>
-          <span className={styles.count}>{t('observations', { count })}</span>
+          {speciesCount.source === 'range' ? (
+            <span className={styles.rangeBadge}>{t('inRange')}</span>
+          ) : (
+            <span className={styles.count}>{t('observations', { count })}</span>
+          )}
         </div>
       </div>
 

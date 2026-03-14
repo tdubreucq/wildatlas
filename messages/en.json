@@ -22,7 +22,8 @@
     "subtitle": "Ranked by observation frequency — top entries are most likely to be encountered.",
     "empty": "No species found within this radius. Try increasing the radius or changing filters.",
     "error": "Unable to load species. Check your connection.",
-    "observations": "{count} obs."
+    "observations": "{count} obs.",
+    "inRange": "In range"
   },
   "loading": {
     "map": "Loading map…",

@@ -22,7 +22,8 @@
     "subtitle": "Ordenadas por frequência de observação — as primeiras são as mais prováveis de encontrar.",
     "empty": "Nenhuma espécie encontrada neste raio. Tente aumentar o raio ou alterar os filtros.",
     "error": "Não foi possível carregar as espécies. Verifique a sua ligação.",
-    "observations": "{count} obs."
+    "observations": "{count} obs.",
+    "inRange": "Na área"
   },
   "loading": {
     "map": "A carregar o mapa…",

@@ -22,7 +22,8 @@
     "subtitle": "Ordenadas por frecuencia de observación — las primeras son las más probables de ver.",
     "empty": "No se encontraron especies en este radio. Intenta aumentar el radio o cambiar los filtros.",
     "error": "No se pueden cargar las especies. Verifica tu conexión.",
-    "observations": "{count} obs."
+    "observations": "{count} obs.",
+    "inRange": "En área"
   },
   "loading": {
     "map": "Cargando mapa…",

@@ -22,7 +22,8 @@
     "subtitle": "Classées par fréquence d'observation — les premières sont les plus susceptibles d'être croisées.",
     "empty": "Aucune espèce trouvée dans ce rayon. Essayez d'augmenter le rayon ou de changer les filtres.",
     "error": "Impossible de charger les espèces. Vérifiez votre connexion.",
-    "observations": "{count} obs."
+    "observations": "{count} obs.",
+    "inRange": "Dans l'aire"
   },
   "loading": {
     "map": "Chargement de la carte…",
