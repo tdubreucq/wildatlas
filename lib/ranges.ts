@@ -1,87 +1,57 @@
 /**
- * FlatGeobuf range query for iNaturalist range maps.
+ * Server-only — ne pas importer côté client.
  *
- * iNaturalist distributes species range maps as static files:
- *   https://www.inaturalist.org/pages/range_maps
+ * Interroge les fichiers FlatGeobuf hébergés sur Cloudflare R2 (bucket privé)
+ * via des presigned URLs S3 générées à la volée. Le client ne voit jamais
+ * les credentials ni les URLs R2.
  *
- * The CI workflow (.github/workflows/update-ranges.yml) downloads the source
- * GPKG files weekly, merges multi-part groups (e.g. Insects × 8 files),
- * converts each to FlatGeobuf, and uploads to Cloudflare R2.
- *
- * One .fgb per taxon group → the client only fetches bytes for active groups.
- *
- * Env vars (set in .env.local and your hosting platform):
- *   NEXT_PUBLIC_RANGES_AVES
- *   NEXT_PUBLIC_RANGES_MAMMALIA
- *   NEXT_PUBLIC_RANGES_REPTILIA
- *   NEXT_PUBLIC_RANGES_AMPHIBIA
- *   NEXT_PUBLIC_RANGES_ACTINOPTERYGII
- *   NEXT_PUBLIC_RANGES_INSECTA
- *   NEXT_PUBLIC_RANGES_ARACHNIDA
- *   NEXT_PUBLIC_RANGES_MOLLUSCA
+ * Env vars requises (server-side, sans NEXT_PUBLIC_) :
+ *   CF_ACCOUNT_ID
+ *   CF_R2_ACCESS_KEY_ID
+ *   CF_R2_SECRET_ACCESS_KEY
  */
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { geojson } from 'flatgeobuf'
-import { TaxonGroup } from '@/types/species'
+import { RangeSpecies, TaxonGroup } from '@/types/species'
 
-/** Maps TaxonGroup to its R2-hosted .fgb URL (via env vars) */
-const RANGES_URLS: Partial<Record<TaxonGroup, string>> = {
-  Aves:            process.env.NEXT_PUBLIC_RANGES_AVES            ?? '',
-  Mammalia:        process.env.NEXT_PUBLIC_RANGES_MAMMALIA         ?? '',
-  Reptilia:        process.env.NEXT_PUBLIC_RANGES_REPTILIA         ?? '',
-  Amphibia:        process.env.NEXT_PUBLIC_RANGES_AMPHIBIA         ?? '',
-  Actinopterygii:  process.env.NEXT_PUBLIC_RANGES_ACTINOPTERYGII   ?? '',
-  Insecta:         process.env.NEXT_PUBLIC_RANGES_INSECTA          ?? '',
-  Arachnida:       process.env.NEXT_PUBLIC_RANGES_ARACHNIDA        ?? '',
-  Mollusca:        process.env.NEXT_PUBLIC_RANGES_MOLLUSCA         ?? '',
+const s3 = new S3Client({
+  region: 'auto',
+  endpoint: `https://${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.CF_R2_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.CF_R2_SECRET_ACCESS_KEY!,
+  },
+})
+
+const BUCKET = 'wildatlas-ranges'
+
+/** Clé R2 pour chaque groupe taxonomique */
+const GROUP_KEYS: Partial<Record<TaxonGroup, string>> = {
+  Aves:           'Aves.fgb',
+  Mammalia:       'Mammalia.fgb',
+  Reptilia:       'Reptilia.fgb',
+  Amphibia:       'Amphibia.fgb',
+  Actinopterygii: 'Actinopterygii.fgb',
+  Insecta:        'Insecta.fgb',
+  Arachnida:      'Arachnida.fgb',
+  Mollusca:       'Mollusca.fgb',
 }
 
-export interface RangeSpecies {
-  taxon_id: number
-  scientific_name: string
-  iconic_taxon_name: TaxonGroup
-}
-
-/**
- * Queries FlatGeobuf files for the given taxon groups (or all configured
- * groups if none specified) and returns species whose range intersects
- * the bounding box around the given point.
- *
- * Each group file is queried in parallel; only the bytes covering the
- * bbox are fetched via HTTP Range requests.
- */
-export async function fetchSpeciesInRange(
-  lat: number,
-  lng: number,
-  radiusKm = 10,
-  taxonGroups: TaxonGroup[] = []
-): Promise<RangeSpecies[]> {
-  const deg = radiusKm / 111
-  const rect = {
-    minX: lng - deg,
-    minY: lat - deg,
-    maxX: lng + deg,
-    maxY: lat + deg,
-  }
-
-  // Determine which groups to query
-  const groupsToQuery = (
-    taxonGroups.length > 0 ? taxonGroups : Object.keys(RANGES_URLS) as TaxonGroup[]
-  ).filter((g) => !!RANGES_URLS[g])
-
-  if (groupsToQuery.length === 0) return []
-
-  const results = await Promise.all(
-    groupsToQuery.map((group) => queryGroup(RANGES_URLS[group]!, group, rect))
+async function presignedUrl(key: string): Promise<string> {
+  return getSignedUrl(
+    s3,
+    new GetObjectCommand({ Bucket: BUCKET, Key: key }),
+    { expiresIn: 60 } // 60s suffisent pour la query serveur
   )
-
-  return results.flat()
 }
 
 async function queryGroup(
-  url: string,
+  key: string,
   group: TaxonGroup,
   rect: { minX: number; minY: number; maxX: number; maxY: number }
 ): Promise<RangeSpecies[]> {
+  const url = await presignedUrl(key)
   const results: RangeSpecies[] = []
   const seen = new Set<number>()
 
@@ -97,10 +67,34 @@ async function queryGroup(
         iconic_taxon_name: group,
       })
     }
-  } catch {
-    // Group file unavailable — degrade gracefully
-    console.warn(`[ranges] Failed to query ${group}:`, url)
+  } catch (err) {
+    console.warn(`[ranges] Failed to query ${group}:`, err)
   }
 
   return results
+}
+
+export async function fetchSpeciesInRange(
+  lat: number,
+  lng: number,
+  radiusKm = 10,
+  taxonGroups: TaxonGroup[] = []
+): Promise<RangeSpecies[]> {
+  const deg = radiusKm / 111
+  const rect = {
+    minX: lng - deg,
+    minY: lat - deg,
+    maxX: lng + deg,
+    maxY: lat + deg,
+  }
+
+  const groupsToQuery = (
+    taxonGroups.length > 0 ? taxonGroups : Object.keys(GROUP_KEYS) as TaxonGroup[]
+  ).filter((g) => GROUP_KEYS[g])
+
+  const results = await Promise.all(
+    groupsToQuery.map((g) => queryGroup(GROUP_KEYS[g]!, g, rect))
+  )
+
+  return results.flat()
 }
