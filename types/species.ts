@@ -46,6 +46,8 @@ export type TaxonGroup =
   | 'Insecta'
   | 'Arachnida'
   | 'Mollusca'
+  | 'Plantae'
+  | 'Fungi'
   | 'Animalia'
 
 /** Groups shown as filter chips (excludes catch-all Animalia) */
@@ -58,6 +60,8 @@ export const TAXON_GROUPS: TaxonGroup[] = [
   'Insecta',
   'Arachnida',
   'Mollusca',
+  'Plantae',
+  'Fungi',
 ]
 
 export const TAXON_CONFIG: Record<
@@ -72,5 +76,7 @@ export const TAXON_CONFIG: Record<
   Insecta:       { abbr: 'INS', color: '#4a1942', bgColor: '#f3d6f0' },
   Arachnida:     { abbr: 'ARA', color: '#5c1a00', bgColor: '#ffe4d6' },
   Mollusca:      { abbr: 'MOL', color: '#3d0a5c', bgColor: '#ead6f5' },
+  Plantae:       { abbr: 'PLA', color: '#1a3d00', bgColor: '#d4edda' },
+  Fungi:         { abbr: 'FUN', color: '#5c3a00', bgColor: '#f5e6d0' },
   Animalia:      { abbr: 'ANI', color: '#3d3d3d', bgColor: '#e8e8e8' },
 }
