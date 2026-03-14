@@ -76,6 +76,8 @@ jobs:
       - name: Inspect GPKG schema (debug)
         run: |
           ogrinfo -al -so Mammalia.gpkg | head -40
+          echo "--- Komodo dragon dans le GPKG source (avant conversion) ---"
+          ogrinfo -al -q -where "taxon_id = 39449" Reptilia.gpkg 2>&1 | head -60
 
       - name: Convert all groups to FlatGeobuf
         run: |
