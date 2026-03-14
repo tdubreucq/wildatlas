@@ -1,0 +1,63 @@
+{
+  "app": {
+    "name": "WildAtlas"
+  },
+  "filters": {
+    "thisMonth": "This month",
+    "groups": {
+      "Mammalia": "Mammals",
+      "Aves": "Birds",
+      "Reptilia": "Reptiles",
+      "Amphibia": "Amphibians",
+      "Actinopterygii": "Fish",
+      "Insecta": "Insects",
+      "Arachnida": "Arachnids",
+      "Mollusca": "Molluscs",
+      "Animalia": "Animals"
+    }
+  },
+  "panel": {
+    "title": "Nearby",
+    "speciesCount": "{count, plural, one {# species} other {# species}}",
+    "subtitle": "Ranked by observation frequency — top entries are most likely to be encountered.",
+    "empty": "No species found within this radius. Try increasing the radius or changing filters.",
+    "error": "Unable to load species. Check your connection.",
+    "observations": "{count} obs."
+  },
+  "loading": {
+    "map": "Loading map…",
+    "location": "Getting location…",
+    "species": "Searching for species…",
+    "detail": "Loading species info…"
+  },
+  "geo": {
+    "unsupported": "Geolocation not supported — using default position.",
+    "error": "{message} — using default position."
+  },
+  "radius": {
+    "label": "Radius",
+    "unit": "km"
+  },
+  "detail": {
+    "close": "Close",
+    "fullSheet": "Full profile →",
+    "wikipedia": "Wikipedia page",
+    "learnMore": "Learn more",
+    "error": "Error: {message}"
+  },
+  "speciesPage": {
+    "back": "← Back to map",
+    "status": "Status: {status}",
+    "classification": "Classification",
+    "learnMore": "Learn more"
+  },
+  "environment": {
+    "Forest": "Forest",
+    "Urban": "Urban",
+    "Wetland": "Wetland",
+    "Park": "Park / Meadow",
+    "Countryside": "Countryside",
+    "Coastal": "Coastal",
+    "Mixed": "Mixed"
+  }
+}

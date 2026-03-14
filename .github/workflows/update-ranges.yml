@@ -1,0 +1,122 @@
+name: Update iNaturalist range maps
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'  # Chaque lundi à 3h UTC
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    env:
+      BASE: "https://inaturalist-open-data.s3.us-east-1.amazonaws.com/geomodel/geopackages/latest/iNaturalist_geomodel_"
+      R2_ENDPOINT: "https://${{ secrets.CF_ACCOUNT_ID }}.r2.cloudflarestorage.com"
+      R2_BUCKET: "s3://wildatlas-ranges"
+      AWS_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
+
+    steps:
+      - name: Install GDAL
+        run: sudo apt-get install -y --no-install-recommends gdal-bin
+
+      # ── Phase 1 : téléchargements en parallèle ────────────────────────────
+      # Groupes à 1 fichier
+
+      - name: Download single-file groups
+        run: |
+          dl() { curl -fsSL --retry 3 --retry-delay 10 -o "$1.gpkg" "${BASE}$1.gpkg" && echo "✓ $1 ($(du -sh $1.gpkg | cut -f1))"; }
+          dl Mammalia       &
+          dl Reptilia       &
+          dl Amphibia       &
+          dl Actinopterygii &
+          dl OtherAnimalia  &
+          dl Mollusca       &
+          dl Arachnida      &
+          dl Fungi          &
+          dl Protozoa       &
+          dl Chromista      &
+          wait
+
+      # Groupes à plusieurs fichiers (téléchargés en parallèle aussi)
+
+      - name: Download multi-file groups (Aves ×2, Insecta ×8, Plantae ×9)
+        run: |
+          dl() { curl -fsSL --retry 3 --retry-delay 10 -o "$1" "${BASE}$1" && echo "✓ $1 ($(du -sh $1 | cut -f1))"; }
+          dl Aves_1.gpkg &
+          dl Aves_2.gpkg &
+          for i in $(seq 1 8); do dl Insecta_${i}.gpkg & done
+          for i in $(seq 1 9); do dl Plantae_${i}.gpkg & done
+          wait
+
+      # ── Phase 2 : merge des groupes multi-fichiers ────────────────────────
+
+      - name: Merge Aves (2 → 1)
+        run: |
+          ogr2ogr -f GPKG Aves.gpkg Aves_1.gpkg -nln ranges -t_srs EPSG:4326
+          ogr2ogr -f GPKG -append Aves.gpkg Aves_2.gpkg -nln ranges
+
+      - name: Merge Insecta (8 → 1)
+        run: |
+          ogr2ogr -f GPKG Insecta.gpkg Insecta_1.gpkg -nln ranges -t_srs EPSG:4326
+          for i in $(seq 2 8); do
+            ogr2ogr -f GPKG -append Insecta.gpkg Insecta_${i}.gpkg -nln ranges
+          done
+
+      - name: Merge Plantae (9 → 1)
+        run: |
+          ogr2ogr -f GPKG Plantae.gpkg Plantae_1.gpkg -nln ranges -t_srs EPSG:4326
+          for i in $(seq 2 9); do
+            ogr2ogr -f GPKG -append Plantae.gpkg Plantae_${i}.gpkg -nln ranges
+          done
+
+      # ── Phase 3 : conversion GPKG → FlatGeobuf (tout en parallèle) ───────
+
+      - name: Convert all groups to FlatGeobuf
+        run: |
+          conv() {
+            ogr2ogr -f FlatGeobuf "${1}.fgb" "${1}.gpkg" -nln ranges
+            echo "✓ ${1}.fgb ($(du -sh ${1}.fgb | cut -f1))"
+          }
+          for group in Aves Mammalia Reptilia Amphibia Actinopterygii OtherAnimalia \
+                       Mollusca Arachnida Insecta Plantae Fungi Protozoa Chromista; do
+            conv "$group" &
+          done
+          wait
+
+      # ── Phase 4 : garde-fou taille avant upload ───────────────────────────
+      # R2 free tier : 10 GB stockage. On bloque à 8 GB pour garder 2 GB de marge.
+      # Les fichiers écrasent la version précédente (pas d'accumulation).
+
+      - name: Check total size (guard < 8 GB)
+        run: |
+          TOTAL_KB=$(du -ck *.fgb | tail -1 | cut -f1)
+          TOTAL_GB=$(echo "scale=2; $TOTAL_KB / 1048576" | bc)
+          echo "Total FlatGeobuf size: ${TOTAL_GB} GB"
+
+          echo "### R2 size check" >> $GITHUB_STEP_SUMMARY
+          echo "| Group | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|------|" >> $GITHUB_STEP_SUMMARY
+          for fgb in *.fgb; do
+            echo "| ${fgb%.fgb} | $(du -sh $fgb | cut -f1) |" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "| **Total** | **${TOTAL_GB} GB** |" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$TOTAL_KB" -gt 8388608 ]; then
+            echo "::error::Total size ${TOTAL_GB} GB exceeds 8 GB safety limit (R2 free tier: 10 GB)"
+            exit 1
+          fi
+
+      # ── Phase 5 : upload vers Cloudflare R2 (tout en parallèle) ──────────
+
+      - name: Upload to Cloudflare R2
+        run: |
+          for group in Aves Mammalia Reptilia Amphibia Actinopterygii OtherAnimalia \
+                       Mollusca Arachnida Insecta Plantae Fungi Protozoa Chromista; do
+            aws s3 cp "${group}.fgb" "${R2_BUCKET}/${group}.fgb" \
+              --endpoint-url "$R2_ENDPOINT" \
+              --no-progress &
+          done
+          wait
+          echo "All uploads complete."

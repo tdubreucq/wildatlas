@@ -1,0 +1,63 @@
+{
+  "app": {
+    "name": "WildAtlas"
+  },
+  "filters": {
+    "thisMonth": "本月",
+    "groups": {
+      "Mammalia": "哺乳动物",
+      "Aves": "鸟类",
+      "Reptilia": "爬行动物",
+      "Amphibia": "两栖动物",
+      "Actinopterygii": "鱼类",
+      "Insecta": "昆虫",
+      "Arachnida": "蛛形动物",
+      "Mollusca": "软体动物",
+      "Animalia": "动物"
+    }
+  },
+  "panel": {
+    "title": "附近物种",
+    "speciesCount": "{count} 种",
+    "subtitle": "按观测频率排序——排名越靠前，越有可能遇见。",
+    "empty": "此范围内未找到物种。请尝试增大范围或更改筛选条件。",
+    "error": "无法加载物种。请检查您的网络连接。",
+    "observations": "{count} 次观测"
+  },
+  "loading": {
+    "map": "地图加载中…",
+    "location": "正在获取位置…",
+    "species": "正在搜索物种…",
+    "detail": "正在加载详情…"
+  },
+  "geo": {
+    "unsupported": "不支持地理定位 — 使用默认位置。",
+    "error": "{message} — 使用默认位置。"
+  },
+  "radius": {
+    "label": "范围",
+    "unit": "公里"
+  },
+  "detail": {
+    "close": "关闭",
+    "fullSheet": "查看完整资料 →",
+    "wikipedia": "维基百科页面",
+    "learnMore": "了解更多",
+    "error": "错误：{message}"
+  },
+  "speciesPage": {
+    "back": "← 返回地图",
+    "status": "保护状态：{status}",
+    "classification": "分类",
+    "learnMore": "了解更多"
+  },
+  "environment": {
+    "Forest": "森林",
+    "Urban": "城市",
+    "Wetland": "湿地",
+    "Park": "公园 / 草地",
+    "Countryside": "乡村",
+    "Coastal": "海岸",
+    "Mixed": "混合"
+  }
+}

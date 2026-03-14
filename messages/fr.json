@@ -1,0 +1,63 @@
+{
+  "app": {
+    "name": "WildAtlas"
+  },
+  "filters": {
+    "thisMonth": "Ce mois-ci",
+    "groups": {
+      "Mammalia": "Mammifères",
+      "Aves": "Oiseaux",
+      "Reptilia": "Reptiles",
+      "Amphibia": "Amphibiens",
+      "Actinopterygii": "Poissons",
+      "Insecta": "Insectes",
+      "Arachnida": "Arachnides",
+      "Mollusca": "Mollusques",
+      "Animalia": "Animaux"
+    }
+  },
+  "panel": {
+    "title": "À proximité",
+    "speciesCount": "{count, plural, one {# espèce} other {# espèces}}",
+    "subtitle": "Classées par fréquence d'observation — les premières sont les plus susceptibles d'être croisées.",
+    "empty": "Aucune espèce trouvée dans ce rayon. Essayez d'augmenter le rayon ou de changer les filtres.",
+    "error": "Impossible de charger les espèces. Vérifiez votre connexion.",
+    "observations": "{count} obs."
+  },
+  "loading": {
+    "map": "Chargement de la carte…",
+    "location": "Localisation en cours…",
+    "species": "Recherche des espèces…",
+    "detail": "Chargement de la fiche…"
+  },
+  "geo": {
+    "unsupported": "Géolocalisation non supportée — position par défaut utilisée.",
+    "error": "{message} — position par défaut utilisée."
+  },
+  "radius": {
+    "label": "Rayon",
+    "unit": "km"
+  },
+  "detail": {
+    "close": "Fermer",
+    "fullSheet": "Fiche complète →",
+    "wikipedia": "Fiche Wikipédia",
+    "learnMore": "En savoir plus",
+    "error": "Erreur : {message}"
+  },
+  "speciesPage": {
+    "back": "← Retour à la carte",
+    "status": "Statut : {status}",
+    "classification": "Classification",
+    "learnMore": "En savoir plus"
+  },
+  "environment": {
+    "Forest": "Forêt",
+    "Urban": "Urbain",
+    "Wetland": "Zone humide",
+    "Park": "Parc / Prairie",
+    "Countryside": "Campagne",
+    "Coastal": "Littoral",
+    "Mixed": "Mixte"
+  }
+}

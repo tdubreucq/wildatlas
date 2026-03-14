@@ -1,0 +1,63 @@
+{
+  "app": {
+    "name": "WildAtlas"
+  },
+  "filters": {
+    "thisMonth": "Este mes",
+    "groups": {
+      "Mammalia": "Mamíferos",
+      "Aves": "Aves",
+      "Reptilia": "Reptiles",
+      "Amphibia": "Anfibios",
+      "Actinopterygii": "Peces",
+      "Insecta": "Insectos",
+      "Arachnida": "Arácnidos",
+      "Mollusca": "Moluscos",
+      "Animalia": "Animales"
+    }
+  },
+  "panel": {
+    "title": "Cerca de ti",
+    "speciesCount": "{count, plural, one {# especie} other {# especies}}",
+    "subtitle": "Ordenadas por frecuencia de observación — las primeras son las más probables de ver.",
+    "empty": "No se encontraron especies en este radio. Intenta aumentar el radio o cambiar los filtros.",
+    "error": "No se pueden cargar las especies. Verifica tu conexión.",
+    "observations": "{count} obs."
+  },
+  "loading": {
+    "map": "Cargando mapa…",
+    "location": "Obteniendo ubicación…",
+    "species": "Buscando especies…",
+    "detail": "Cargando ficha…"
+  },
+  "geo": {
+    "unsupported": "Geolocalización no soportada — usando posición por defecto.",
+    "error": "{message} — usando posición por defecto."
+  },
+  "radius": {
+    "label": "Radio",
+    "unit": "km"
+  },
+  "detail": {
+    "close": "Cerrar",
+    "fullSheet": "Ficha completa →",
+    "wikipedia": "Página de Wikipedia",
+    "learnMore": "Saber más",
+    "error": "Error: {message}"
+  },
+  "speciesPage": {
+    "back": "← Volver al mapa",
+    "status": "Estado: {status}",
+    "classification": "Clasificación",
+    "learnMore": "Saber más"
+  },
+  "environment": {
+    "Forest": "Bosque",
+    "Urban": "Urbano",
+    "Wetland": "Humedal",
+    "Park": "Parque / Pradera",
+    "Countryside": "Campo",
+    "Coastal": "Litoral",
+    "Mixed": "Mixto"
+  }
+}

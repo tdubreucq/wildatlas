@@ -1,0 +1,43 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 0 16px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bar::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  background: var(--color-surface);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.chip:active {
+  transform: scale(0.95);
+}
+
+.chip.active {
+  box-shadow: var(--shadow-md);
+}
+
+.monthToggle {
+  composes: chip;
+  margin-left: auto;
+  flex-shrink: 0;
+}
