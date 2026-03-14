@@ -76,7 +76,7 @@ jobs:
       - name: Convert all groups to FlatGeobuf
         run: |
           conv() {
-            ogr2ogr -f FlatGeobuf "${1}.fgb" "${1}.gpkg" -nln ranges
+            ogr2ogr -f FlatGeobuf "${1}.fgb" "${1}.gpkg" -nln ranges -skipfailures
             echo "✓ ${1}.fgb ($(du -sh ${1}.fgb | cut -f1))"
           }
           for group in Aves Mammalia Reptilia Amphibia Actinopterygii OtherAnimalia \
