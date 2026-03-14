@@ -47,6 +47,19 @@ export async function fetchSpeciesCounts(
   })
 }
 
+export async function fetchTaxonBatch(ids: number[], locale = 'en'): Promise<Taxon[]> {
+  if (ids.length === 0) return []
+  const params = new URLSearchParams({
+    id: ids.slice(0, 100).join(','), // iNat max ~100 par requête
+    locale,
+    per_page: String(Math.min(ids.length, 100)),
+  })
+  const res = await fetch(`${INAT_BASE}/taxa?${params}`, { headers: HEADERS })
+  if (!res.ok) throw new Error(`iNat taxa batch error: ${res.status}`)
+  const data = await res.json()
+  return (data.results as unknown[]).map((r) => transformTaxon(r as Record<string, unknown>))
+}
+
 export async function fetchTaxonDetail(taxonId: number, locale = 'en'): Promise<Taxon> {
   const res = await fetch(
     `${INAT_BASE}/taxa/${taxonId}?locale=${locale}`,
