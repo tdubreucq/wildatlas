@@ -77,7 +77,19 @@ jobs:
         run: |
           ogrinfo -al -so Mammalia.gpkg | head -40
           echo "--- Komodo dragon dans le GPKG source (avant conversion) ---"
-          ogrinfo -al -q -where "taxon_id = 39449" Reptilia.gpkg 2>&1 | head -60
+          ogrinfo -al -q -where "taxon_id = 39449" Reptilia.gpkg 2>&1 | python3 -c "
+import sys, re
+data = sys.stdin.read()
+polys = re.findall(r'\(\(', data)
+pts = re.findall(r'(-?\d+\.\d+) (-?\d+\.\d+)', data)
+lngs = [float(p[0]) for p in pts]
+lats = [float(p[1]) for p in pts]
+print(f'Sous-polygones dans le GPKG source: {len(polys)}')
+if pts:
+    print(f'Bbox source: [{min(lngs):.2f}, {min(lats):.2f}, {max(lngs):.2f}, {max(lats):.2f}]')
+    paris_polys = [(p[0], p[1]) for p in pts if -5 < float(p[0]) < 10 and 45 < float(p[1]) < 52]
+    print(f'Coords proches de Paris (lng -5..10, lat 45..52): {len(paris_polys)}')
+"
 
       - name: Convert all groups to FlatGeobuf
         run: |
