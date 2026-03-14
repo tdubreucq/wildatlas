@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css'
 import { useTranslations } from 'next-intl'
 import { MapContainer, TileLayer } from 'react-leaflet'
 import { UserMarker } from './UserMarker'
+import { RangeLayer } from './RangeLayer'
 import { DebugMapLayer } from './DebugMapLayer'
 import { useAppStore } from '@/store/useAppStore'
 import styles from './MapView.module.css'
@@ -33,6 +34,7 @@ export function MapView({ lat, lng, accuracy }: Props) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <UserMarker lat={lat} lng={lng} accuracy={IS_DEBUG ? undefined : accuracy} />
+        <RangeLayer />
         {IS_DEBUG && <DebugMapLayer />}
       </MapContainer>
 

@@ -27,8 +27,8 @@ export function SpeciesDetail() {
   const photo = thumbUrl(taxon?.default_photo?.url, 'medium')
 
   return (
-    <div className={styles.overlay} onClick={() => setSelectedTaxonId(null)}>
-      <div className={styles.sheet} onClick={(e) => e.stopPropagation()}>
+    <div className={styles.overlay}>
+      <div className={styles.sheet}>
         <div className={styles.header}>
           <span className={styles.headerTitle}>
             {taxon?.preferred_common_name ?? taxon?.name ?? '…'}
