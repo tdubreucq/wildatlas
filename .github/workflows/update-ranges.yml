@@ -90,6 +90,23 @@ if pts:
     paris_polys = [(p[0], p[1]) for p in pts if -5 < float(p[0]) < 10 and 45 < float(p[1]) < 52]
     print(f'Coords proches de Paris (lng -5..10, lat 45..52): {len(paris_polys)}')
 "
+          echo "--- GeoJSON individuel iNat pour le Komodo (source de vérité) ---"
+          curl -s "https://inaturalist-open-data.s3.us-east-1.amazonaws.com/geomodel/geojsons/latest/39449.geojson" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+geom = data.get('geometry') or data
+def extract_pts(g):
+    if g['type'] == 'Polygon': return [c for ring in g['coordinates'] for c in ring]
+    if g['type'] == 'MultiPolygon': return [c for poly in g['coordinates'] for ring in poly for c in ring]
+    if g['type'] == 'Feature': return extract_pts(g['geometry'])
+    return []
+pts = extract_pts(data)
+lngs = [p[0] for p in pts]
+lats = [p[1] for p in pts]
+poly_count = len(data['geometry']['coordinates']) if data.get('type') == 'Feature' and data['geometry']['type'] == 'MultiPolygon' else '?'
+print(f'GeoJSON individuel — sous-polygones: {poly_count}')
+print(f'GeoJSON individuel — bbox: [{min(lngs):.2f}, {min(lats):.2f}, {max(lngs):.2f}, {max(lats):.2f}]')
+"
 
       - name: Convert all groups to FlatGeobuf
         run: |
