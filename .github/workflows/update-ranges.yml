@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 3 * * 1'  # Chaque lundi à 3h UTC
   workflow_dispatch:
+    inputs:
+      debug_only:
+        description: 'Reptilia seulement (debug) — ne pas uploader les autres groupes'
+        type: boolean
+        default: false
 
 jobs:
   update:
@@ -21,14 +26,18 @@ jobs:
       - name: Install GDAL
         run: sudo apt-get install -y --no-install-recommends gdal-bin
 
-      # ── Phase 1 : téléchargements en parallèle ────────────────────────────
-      # Groupes à 1 fichier
+      # ── Phase 1 : téléchargements ─────────────────────────────────────────
 
-      - name: Download single-file groups
+      - name: Download Reptilia (toujours)
+        run: |
+          curl -fsSL --retry 3 --retry-delay 10 -o "Reptilia.gpkg" "${BASE}Reptilia.gpkg"
+          echo "✓ Reptilia ($(du -sh Reptilia.gpkg | cut -f1))"
+
+      - name: Download other single-file groups (skipped in debug mode)
+        if: ${{ inputs.debug_only != true }}
         run: |
           dl() { curl -fsSL --retry 3 --retry-delay 10 -o "$1.gpkg" "${BASE}$1.gpkg" && echo "✓ $1 ($(du -sh $1.gpkg | cut -f1))"; }
           dl Mammalia       &
-          dl Reptilia       &
           dl Amphibia       &
           dl Actinopterygii &
           dl OtherAnimalia  &
@@ -39,9 +48,8 @@ jobs:
           dl Chromista      &
           wait
 
-      # Groupes à plusieurs fichiers (téléchargés en parallèle aussi)
-
-      - name: Download multi-file groups (Aves ×2, Insecta ×8, Plantae ×9)
+      - name: Download multi-file groups (Aves ×2, Insecta ×8, Plantae ×9) (skipped in debug mode)
+        if: ${{ inputs.debug_only != true }}
         run: |
           dl() { curl -fsSL --retry 3 --retry-delay 10 -o "$1" "${BASE}$1" && echo "✓ $1 ($(du -sh $1 | cut -f1))"; }
           dl Aves_1.gpkg &
@@ -52,30 +60,33 @@ jobs:
 
       # ── Phase 2 : merge des groupes multi-fichiers ────────────────────────
 
-      - name: Merge Aves (2 → 1)
+      - name: Merge Aves (2 → 1) (skipped in debug mode)
+        if: ${{ inputs.debug_only != true }}
         run: |
           ogr2ogr -f GPKG Aves.gpkg Aves_1.gpkg -nln ranges -t_srs EPSG:4326
           ogr2ogr -f GPKG -append Aves.gpkg Aves_2.gpkg -nln ranges
 
-      - name: Merge Insecta (8 → 1)
+      - name: Merge Insecta (8 → 1) (skipped in debug mode)
+        if: ${{ inputs.debug_only != true }}
         run: |
           ogr2ogr -f GPKG Insecta.gpkg Insecta_1.gpkg -nln ranges -t_srs EPSG:4326
           for i in $(seq 2 8); do
             ogr2ogr -f GPKG -append Insecta.gpkg Insecta_${i}.gpkg -nln ranges
           done
 
-      - name: Merge Plantae (9 → 1)
+      - name: Merge Plantae (9 → 1) (skipped in debug mode)
+        if: ${{ inputs.debug_only != true }}
         run: |
           ogr2ogr -f GPKG Plantae.gpkg Plantae_1.gpkg -nln ranges -t_srs EPSG:4326
           for i in $(seq 2 9); do
             ogr2ogr -f GPKG -append Plantae.gpkg Plantae_${i}.gpkg -nln ranges
           done
 
-      # ── Phase 3 : conversion GPKG → FlatGeobuf (tout en parallèle) ───────
+      # ── Phase 3 : diagnostics (debug) ─────────────────────────────────────
 
       - name: Inspect GPKG schema (debug)
         run: |
-          ogrinfo -al -so Mammalia.gpkg | head -40
+          ogrinfo -al -so Reptilia.gpkg | head -20
           echo "--- Komodo dragon dans le GPKG source (avant conversion) ---"
           ogrinfo -al -q -where "taxon_id = 39449" Reptilia.gpkg 2>&1 | python3 -c "
 import sys, re
@@ -94,7 +105,6 @@ if pts:
           curl -s "https://inaturalist-open-data.s3.us-east-1.amazonaws.com/geomodel/geojsons/latest/39449.geojson" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
-geom = data.get('geometry') or data
 def extract_pts(g):
     if g['type'] == 'Polygon': return [c for ring in g['coordinates'] for c in ring]
     if g['type'] == 'MultiPolygon': return [c for poly in g['coordinates'] for ring in poly for c in ring]
@@ -103,10 +113,13 @@ def extract_pts(g):
 pts = extract_pts(data)
 lngs = [p[0] for p in pts]
 lats = [p[1] for p in pts]
-poly_count = len(data['geometry']['coordinates']) if data.get('type') == 'Feature' and data['geometry']['type'] == 'MultiPolygon' else '?'
+geom = data['geometry'] if data.get('type') == 'Feature' else data
+poly_count = len(geom['coordinates']) if geom['type'] == 'MultiPolygon' else 1
 print(f'GeoJSON individuel — sous-polygones: {poly_count}')
 print(f'GeoJSON individuel — bbox: [{min(lngs):.2f}, {min(lats):.2f}, {max(lngs):.2f}, {max(lats):.2f}]')
 "
+
+      # ── Phase 4 : conversion GPKG → FlatGeobuf ────────────────────────────
 
       - name: Convert all groups to FlatGeobuf
         run: |
@@ -118,15 +131,17 @@ print(f'GeoJSON individuel — bbox: [{min(lngs):.2f}, {min(lats):.2f}, {max(lng
               -skipfailures
             echo "✓ ${1}.fgb ($(du -sh ${1}.fgb | cut -f1))"
           }
-          for group in Aves Mammalia Reptilia Amphibia Actinopterygii OtherAnimalia \
-                       Mollusca Arachnida Insecta Plantae Fungi Protozoa Chromista; do
-            conv "$group" &
-          done
-          wait
+          if [ "${{ inputs.debug_only }}" = "true" ]; then
+            conv Reptilia
+          else
+            for group in Aves Mammalia Reptilia Amphibia Actinopterygii OtherAnimalia \
+                         Mollusca Arachnida Insecta Plantae Fungi Protozoa Chromista; do
+              conv "$group" &
+            done
+            wait
+          fi
 
-      # ── Phase 4 : garde-fou taille avant upload ───────────────────────────
-      # R2 free tier : 10 GB stockage. On bloque à 8 GB pour garder 2 GB de marge.
-      # Les fichiers écrasent la version précédente (pas d'accumulation).
+      # ── Phase 5 : garde-fou taille avant upload ───────────────────────────
 
       - name: Check total size (guard < 8 GB)
         run: |
@@ -147,15 +162,20 @@ print(f'GeoJSON individuel — bbox: [{min(lngs):.2f}, {min(lats):.2f}, {max(lng
             exit 1
           fi
 
-      # ── Phase 5 : upload vers Cloudflare R2 (tout en parallèle) ──────────
+      # ── Phase 6 : upload vers Cloudflare R2 ──────────────────────────────
 
       - name: Upload to Cloudflare R2
         run: |
-          for group in Aves Mammalia Reptilia Amphibia Actinopterygii OtherAnimalia \
-                       Mollusca Arachnida Insecta Plantae Fungi Protozoa Chromista; do
-            aws s3 cp "${group}.fgb" "${R2_BUCKET}/${group}.fgb" \
-              --endpoint-url "$R2_ENDPOINT" \
-              --no-progress &
-          done
-          wait
+          if [ "${{ inputs.debug_only }}" = "true" ]; then
+            aws s3 cp "Reptilia.fgb" "${R2_BUCKET}/Reptilia.fgb" \
+              --endpoint-url "$R2_ENDPOINT" --no-progress
+          else
+            for group in Aves Mammalia Reptilia Amphibia Actinopterygii OtherAnimalia \
+                         Mollusca Arachnida Insecta Plantae Fungi Protozoa Chromista; do
+              aws s3 cp "${group}.fgb" "${R2_BUCKET}/${group}.fgb" \
+                --endpoint-url "$R2_ENDPOINT" \
+                --no-progress &
+            done
+            wait
+          fi
           echo "All uploads complete."
