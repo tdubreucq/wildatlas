@@ -87,37 +87,43 @@ jobs:
       - name: Inspect GPKG schema (debug)
         run: |
           ogrinfo -al -so Reptilia.gpkg | head -20
+
+          cat > /tmp/analyze_gpkg.py << 'PYEOF'
+          import sys, re
+          data = sys.stdin.read()
+          polys = re.findall(r'\(\(', data)
+          pts = re.findall(r'(-?\d+\.\d+) (-?\d+\.\d+)', data)
+          lngs = [float(p[0]) for p in pts]
+          lats = [float(p[1]) for p in pts]
+          print(f'Sous-polygones dans le GPKG source: {len(polys)}')
+          if pts:
+              print(f'Bbox source: [{min(lngs):.2f}, {min(lats):.2f}, {max(lngs):.2f}, {max(lats):.2f}]')
+              paris = [(p[0], p[1]) for p in pts if -5 < float(p[0]) < 10 and 45 < float(p[1]) < 52]
+              print(f'Coords proches de Paris (lng -5..10, lat 45..52): {len(paris)}')
+          PYEOF
+
+          cat > /tmp/analyze_geojson.py << 'PYEOF'
+          import sys, json
+          data = json.load(sys.stdin)
+          def extract_pts(g):
+              if g['type'] == 'Polygon': return [c for ring in g['coordinates'] for c in ring]
+              if g['type'] == 'MultiPolygon': return [c for poly in g['coordinates'] for ring in poly for c in ring]
+              if g['type'] == 'Feature': return extract_pts(g['geometry'])
+              return []
+          pts = extract_pts(data)
+          lngs = [p[0] for p in pts]
+          lats = [p[1] for p in pts]
+          geom = data['geometry'] if data.get('type') == 'Feature' else data
+          poly_count = len(geom['coordinates']) if geom['type'] == 'MultiPolygon' else 1
+          print(f'GeoJSON individuel - sous-polygones: {poly_count}')
+          print(f'GeoJSON individuel - bbox: [{min(lngs):.2f}, {min(lats):.2f}, {max(lngs):.2f}, {max(lats):.2f}]')
+          PYEOF
+
           echo "--- Komodo dragon dans le GPKG source (avant conversion) ---"
-          ogrinfo -al -q -where "taxon_id = 39449" Reptilia.gpkg 2>&1 | python3 -c "
-import sys, re
-data = sys.stdin.read()
-polys = re.findall(r'\(\(', data)
-pts = re.findall(r'(-?\d+\.\d+) (-?\d+\.\d+)', data)
-lngs = [float(p[0]) for p in pts]
-lats = [float(p[1]) for p in pts]
-print(f'Sous-polygones dans le GPKG source: {len(polys)}')
-if pts:
-    print(f'Bbox source: [{min(lngs):.2f}, {min(lats):.2f}, {max(lngs):.2f}, {max(lats):.2f}]')
-    paris_polys = [(p[0], p[1]) for p in pts if -5 < float(p[0]) < 10 and 45 < float(p[1]) < 52]
-    print(f'Coords proches de Paris (lng -5..10, lat 45..52): {len(paris_polys)}')
-"
-          echo "--- GeoJSON individuel iNat pour le Komodo (source de vérité) ---"
-          curl -s "https://inaturalist-open-data.s3.us-east-1.amazonaws.com/geomodel/geojsons/latest/39449.geojson" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-def extract_pts(g):
-    if g['type'] == 'Polygon': return [c for ring in g['coordinates'] for c in ring]
-    if g['type'] == 'MultiPolygon': return [c for poly in g['coordinates'] for ring in poly for c in ring]
-    if g['type'] == 'Feature': return extract_pts(g['geometry'])
-    return []
-pts = extract_pts(data)
-lngs = [p[0] for p in pts]
-lats = [p[1] for p in pts]
-geom = data['geometry'] if data.get('type') == 'Feature' else data
-poly_count = len(geom['coordinates']) if geom['type'] == 'MultiPolygon' else 1
-print(f'GeoJSON individuel — sous-polygones: {poly_count}')
-print(f'GeoJSON individuel — bbox: [{min(lngs):.2f}, {min(lats):.2f}, {max(lngs):.2f}, {max(lats):.2f}]')
-"
+          ogrinfo -al -q -where "taxon_id = 39449" Reptilia.gpkg 2>&1 | python3 /tmp/analyze_gpkg.py
+
+          echo "--- GeoJSON individuel iNat pour le Komodo (source de verite) ---"
+          curl -s "https://inaturalist-open-data.s3.us-east-1.amazonaws.com/geomodel/geojsons/latest/39449.geojson" | python3 /tmp/analyze_geojson.py
 
       # ── Phase 4 : conversion GPKG → FlatGeobuf ────────────────────────────
 
